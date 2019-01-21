@@ -142,15 +142,15 @@ public class PanelRenderer extends CoreRenderer {
 		}
 
 		if (_look != null) {
-			rw.writeAttribute("class", _styleClass + "panel panel-" + _look, "class");
+			rw.writeAttribute("class", _styleClass + "card bg-" + _look, "class");
 		} else {
-			rw.writeAttribute("class", _styleClass + "panel panel-default", "class");
+			rw.writeAttribute("class", _styleClass + "card", "class");
 		}
 
 		UIComponent head = panel.getFacet("heading");
 		if (head != null || _title != null) {
 			rw.startElement("div", panel);
-			rw.writeAttribute("class", "panel-heading", "class");
+			rw.writeAttribute("class", "card-header", "class");
 			String _titleStyle = panel.getTitleStyle();
 			if (null != _titleStyle) {
 				rw.writeAttribute("style", _titleStyle, "style");
@@ -160,7 +160,7 @@ public class PanelRenderer extends CoreRenderer {
 				if (_titleClass != null) {
 					rw.writeAttribute("class", _titleClass, "class");
 				} else {
-					rw.writeAttribute("class", "panel-title", "class");
+					rw.writeAttribute("class", "card-title", "class");
 				}
 				if (isCollapsible) {
 					writeTitleLink(panel, rw, jQueryClientID, accordionParent);
@@ -228,7 +228,7 @@ public class PanelRenderer extends CoreRenderer {
 		}
 		// create the body
 		rw.startElement("div", panel);
-		rw.writeAttribute("class", "panel-body", "class");
+		rw.writeAttribute("class", "card-body", "class");
 		if (panel.isContentDisabled()) {
 			rw.startElement("fieldset", panel);
 			rw.writeAttribute("disabled", "disabled", "null");

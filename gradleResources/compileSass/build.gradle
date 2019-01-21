@@ -1,0 +1,237 @@
+/*
+ * Copyright 2014-2017 Riccardo Massera (TheCoder4.Eu)
+ *
+ * This file is part of BootsFaces.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+//Compile BootsFaces Scss files to CSS and Minify
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        //classpath 'com.bertramlabs.plugins:asset-pipeline-gradle:2.15.1'
+        //UNSTABLE//classpath 'com.bertramlabs.plugins:asset-pipeline-gradle:3.0.5'
+        //classpath 'com.bertramlabs.plugins:asset-pipeline-gradle:2.14.0'
+        //classpath 'com.bertramlabs.plugins:less-asset-pipeline:2.15.1'
+        //UNSTABLE//classpath 'com.bertramlabs.plugins:less-asset-pipeline:3.0.5'
+        //classpath 'com.bertramlabs.plugins:less-asset-pipeline:2.14.0'
+        
+        classpath 'com.bertramlabs.plugins:asset-pipeline-gradle:3.0.5'
+        classpath 'com.bertramlabs.plugins:sass-asset-pipeline:3.0.5'        
+    }
+}
+
+apply plugin: 'com.bertramlabs.asset-pipeline'
+
+println 'compileSass:Themes('+themes.size+'):'+themes
+
+assets {
+  minifyJs = false
+  //true
+  minifyCss = true
+  enableSourceMaps = false
+  configOptions = [:]
+
+  includes = ['default/bs-*.scss']
+  themes.each() { name -> includes.add(name+'/bs-*.scss') }
+  includes.add('patternfly/bs-*.scss')
+
+  excludes = ['**/*.scss','**/mixins/*.scss'] //Exclude mixins
+
+  // Can add custom asset locations (directories or individual jar files)
+  from "${buildDir}/process/scss"
+  from "${buildDir}/process/bootstrap"
+  from "${buildDir}/process/bsf"
+}
+
+assetCompile.dependsOn assetClean
+
+
+/*
+ * Dynamic tasks to copy files to the process directory
+ */
+themes.each {
+    //create a dynamic task for each theme (in the config phase)
+    def themeName ->
+    tasks.create(name: "copyDefaultTheme2$themeName", type: Copy) {
+        println "compileSass:Configure Task copyDefaultTheme2$themeName"
+
+        from BootstrapFolder+'/scss' //Bootstrap scss
+        from staticResourcesDir+'/scss/bf' //BootsFaces scss
+        include '**/*.scss'
+        exclude 'extra-theme.scss'
+
+        into "${buildDir}/process/scss/"+themeName
+    }
+}
+
+themes.each {
+    //create a dynamic task for each theme (in the config phase)
+    def themeName ->
+    tasks.create(name: "copyBootswatchTheme2$themeName", type: Copy) {
+        println "compileSass:Configure Task copyBootswatchTheme2$themeName from "+BootswatchFolder+'/'+themeName
+
+        from BootswatchFolder+'/'+themeName //Bootswatch Theme Sass
+        into "${buildDir}/process/scss/"+themeName
+
+        rename '_bootswatch.scss', 'extra-theme.scss'
+        rename '_variables.scss', 'extra-variables.scss'
+    }
+}
+
+task copyBootswatchSass4Themes (dependsOn: ['cloneDefaultSass4Themes',tasks.matching { Task task -> task.name.startsWith("copyBootswatchTheme2")},'copyBootswatchSassCustomizations']) {
+    description 'BootsFaces task: copies the Bootswatch scss files to the process folder for all the included Themes.'
+    println "Task copyBootswatchSass4Themes"
+}
+
+
+task cloneDefaultSass4Themes (dependsOn: [tasks.matching { Task task -> task.name.startsWith("copyDefaultTheme2")}]) {
+    description 'BootsFaces task: copies the Bootstrap scss files to the process folder for all the included Themes.'
+    println "Task cloneDefaultSass4Themes"
+}
+copyBootswatchSass4Themes.mustRunAfter cloneDefaultSass4Themes
+
+//Copy the per-Theme Customizations
+task copyBootswatchSassCustomizations(type: Copy) {
+  	description 'BootsFaces task: copies the theme Customizations files to the process folder.'
+  	from staticResourcesDir+'/scss/bw'
+  	into "${buildDir}/process/scss"
+}
+
+/*
+ * Tasks to copy files to the process directory
+ */
+//Copy the scss files for Bootstrap(default) Theme
+task copyOriginalSass(type: Copy) {
+  	description 'BootsFaces task: copies the Bootstrap scss folders to the process folder.'
+  	from BootstrapFolder+'/scss'
+  	into "${buildDir}/process/scss/default"
+}
+//Copy the scss files for Bootstrap(default) Theme
+task copyBootsFacesSass(type: Copy) {
+  	description 'BootsFaces task: copies the BootsFaces bs-*.scss files to the process folder.'
+  	from staticResourcesDir+'/scss/bf'
+  	into "${buildDir}/process/scss/default"
+
+    exclude 'bs-patternfly.scss'
+}
+
+//Copy the Bootstrap scss files for PatternFly Theme
+task copyOriginalSass4PatternFly(type: Copy) {
+  	description 'BootsFaces task: copies the Bootstrap scss folders to the process folder.'
+  	from BootstrapFolder+'/scss'
+  	into "${buildDir}/process/scss/patternfly/lib/bootstrap"
+}
+
+//Copy the scss files for PatternFly Theme
+task copyBootsFacesSass4PatternFly(type: Copy) {
+  	description 'BootsFaces task: copies the BootsFaces bs-*.less files to the process folder.'
+  	from staticResourcesDir+'/scss/pf'
+  	into "${buildDir}/process/scss/patternfly"
+    exclude 'extra-theme.scss'
+    rename 'bs-patternfly.scss', 'extra-theme.scss'
+}
+
+//Copy the scss files for PatternFly Theme
+task copyPatternFlySassFiles(type: Copy) {
+  	description 'BootsFaces task: copies the Bootstrap and PatternFly scss folders to the process folder.'
+  	from PatternFlyFolder+'/src/scss'
+  	into "${buildDir}/process/scss/patternfly"
+}
+task copyPatternFlySass(dependsOn: ['copyPatternFlySassFiles','copyOriginalSass4PatternFly','copyBootsFacesSass4PatternFly']) {
+}
+copyOriginalSass4PatternFly.mustRunAfter copyPatternFlySassFiles
+
+//Common for all themes
+task copyBootstrapJs(type: Copy) {
+  	description 'BootsFaces task: copies the Bootstrap JavaScript files to the process folder.'
+  	from BootstrapFolder+'/js/dist'
+  	include '*.js'
+  	exclude 'affix.js', 'popover.js'
+        //, 'scrollspy.js'
+  	filter{String line -> line.startsWith('/* ') ? line.replace('/* ', '/** @license ') : line }
+  	into "${buildDir}/process/bootstrap/js"
+}
+
+task copyBootsFacesFiles(type: Copy) {
+  	description 'BootsFaces task: copies the BootsFaces resource files to the process folder and adds the license.'
+  	from staticResourcesDir+'/css/bsf.css'
+  	from staticResourcesDir+'/js/bsf.js'
+  	filter{String line -> line.startsWith('/*!') ? line.replace('/*!', '/** @license ') : line }
+
+  	into "${buildDir}/process/bsf"
+}
+
+task copyFiles2Process(dependsOn: ['copyOriginalSass', 'copyBootsFacesSass', 'copyBootsFacesFiles', 'copyBootstrapJs','copyBootswatchSass4Themes', 'copyPatternFlySass']) {
+
+}
+/* END Tasks to copy files to the process directory */
+
+/*
+ Tasks AFTER assetCompile
+ */
+
+themes.each {
+    //create a dynamic task for each theme
+    def themeName ->
+    tasks.create(name: "cleanAssetThemesDir$themeName", type: Delete) {
+        println 'compileSass:Configure Task clean Themes Asset: '+themeName
+        delete fileTree(dir: "${buildDir}/assets/"+themeName, includes: ['*.gz', 'bs-*-*.css', 'bsf-*.css', '*-*.js'],
+                                                              excludes: ['bs-progress-bars.css', 'bs-list-group.css'])
+    }
+}
+task cleanAssetThemeDirs(dependsOn: tasks.matching { Task task -> task.name.startsWith("cleanAssetThemesDir")}) {
+    println "compileSass: Cleaning Themes Asset"
+}
+
+task cleanAssetDir(type: Delete) {
+     //delete fileTree(dir: "${buildDir}/assets", includes: ['*.gz', '*-*.js'])
+     delete fileTree(dir: "${buildDir}/assets/default", includes: ['*.gz', 'bs-*-*.css', 'bsf-*.css', '*-*.js'],
+                                                        excludes: ['bs-progress-bars.css', 'bs-list-group.css'])
+     delete fileTree(dir: "${buildDir}/assets/patternfly", includes: ['*.gz', 'bs-*-*.css', 'bsf-*.css', '*-*.js'],
+                                                           excludes: ['bs-progress-bars.css', 'bs-list-group.css', 'bs-bootstrap-switch.css'])
+     delete "${buildDir}/assets/patternfly/lib/"
+     delete fileTree(dir: "${buildDir}/assets", includes: ['*.gz', '*-*.js', 'bsf-*.*'])
+}
+
+/* END Tasks AFTER assetCompile */
+
+assetCompile.doLast {
+   //cleanAssetDir.execute()
+   String license = "/*! Bootstrap v"+BootstrapVersion+" (http://getbootstrap.com) | Copyright 2011-2016 Twitter, Inc. | Licensed under MIT */\n"
+   println license
+
+   FileTree tree = fileTree("${buildDir}/assets/default") {
+     include '**/*.css'
+   }
+   // Iterate over the contents of the tree
+   tree.each {
+     File css -> println 'Adding license to '+css
+     String file = css
+     String contents = css.getText( 'UTF-8' )
+     contents = license+contents
+     new File( file ).write( contents, 'UTF-8' )
+   }
+}
+
+task compileAndMinify(dependsOn: ['copyFiles2Process', 'assetCompile', 'cleanAssetDir', 'cleanAssetThemeDirs']) {
+  println "compileSass: Compile and Minify"
+}
+assetCompile.mustRunAfter copyFiles2Process
+cleanAssetDir.mustRunAfter assetCompile
+cleanAssetThemeDirs.mustRunAfter cleanAssetDir
+

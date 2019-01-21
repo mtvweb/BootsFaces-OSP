@@ -18,12 +18,12 @@
 
  ext.extractedResources=project(':gradleResources:Bootstrap').buildDir.toString()+'/extracted'
  ext.BootstrapFolder = extractedResources+'/bootstrap-'+BootstrapVersion
- ext.BootswatchFolder = extractedResources+'/bootswatch-'+BootswatchFullVersion.replace('+','-')
+ ext.BootswatchFolder = extractedResources+'/bootswatch-'+BootswatchFullVersion.replace('+','-')+'/dist'
  ext.PatternFlyFolder = extractedResources+'/patternfly-'+PatternFlyVersion
 
  ext.staticResourcesDir = "${projectDir}/staticResources"
 
- ext.assetResources=project(':gradleResources:compileLess').projectDir.toString()+'/build/assets'
+ ext.assetResources=project(':gradleResources:compileSass').projectDir.toString()+'/build/assets'
 
 /*
  * Tasks to Copy STATIC files to resources
@@ -173,7 +173,7 @@
      description 'BootsFaces task: copies Asset resources to the resources folder.'
  }
 copyAssetResources.mustRunAfter copyBootsFacesResources
-copyAssetResources.mustRunAfter ':gradleResources:compileLess:compileAndMinify'
+copyAssetResources.mustRunAfter ':gradleResources:compileSass:compileAndMinify'
 
 /* END Tasks to Copy ASSET files to resources */
 
@@ -215,7 +215,7 @@ updateMavenResources.mustRunAfter cleanMavenResources
 
  /* MAIN Task */
  task buildResources(dependsOn: [':gradleResources:Bootstrap:downloadResources', 'copyBootsFacesResources',
-                                 ':gradleResources:compileLess:compileAndMinify', 'copyAssetResources',
+                                 ':gradleResources:compileSass:compileAndMinify', 'copyAssetResources',
                                  'updateGradleResources', //updateGradleResources just copies "other" Theme
                                  'cleanMavenResources', 'updateMavenResources','copyLicensesToMetaInf']) {
     description 'BootsFaces task: downloads Bootstrap from the internet and generates both the mavenResource folder and the Gradle resource folder from scratch.'
